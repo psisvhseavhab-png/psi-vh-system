@@ -1,0 +1,48 @@
+name: Build PSI-VH iOS App
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build-ios:
+    runs-on: macos-14
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.x'
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        run: |
+          if [ -d "frontend" ]; then cd frontend; fi
+          flutter pub get
+
+      - name: Build iOS App (.app / .ipa without codesign for testing)
+        run: |
+          if [ -d "frontend" ]; then cd frontend; fi
+          flutter build ios --release --no-codesign
+          cd build/ios/iphoneos
+          mkdir -p Payload
+          cp -r Runner.app Payload/
+          zip -r PSI_VH_School_System_iOS.ipa Payload
+
+      - name: Upload iOS IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PSI_VH_School_System_iOS_IPA
+          path: "**/build/ios/iphoneos/PSI_VH_School_System_iOS.ipa"
+          retention-days: 14
+
